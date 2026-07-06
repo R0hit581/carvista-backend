@@ -1,30 +1,25 @@
 package com.carvista.controller;
 
+import com.carvista.dto.CarFilterRequest;
 import com.carvista.model.Car;
-import com.carvista.repository.CarRepository;
+import com.carvista.service.RecommendationService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/recommend")
+@CrossOrigin(origins = "http://localhost:4200")
 public class RecommendationController {
 
-    private final CarRepository carRepository;
+    private final RecommendationService recommendationService;
 
-    public RecommendationController(CarRepository carRepository) {
-        this.carRepository = carRepository;
+    public RecommendationController(RecommendationService recommendationService) {
+        this.recommendationService = recommendationService;
     }
 
-    @GetMapping
-    public List<Car> recommendCars(@RequestParam String brand,
-                                   @RequestParam int minPower,
-                                   @RequestParam double minMileage) {
-        // Simple filter logic
-        return carRepository.findAll().stream()
-                .filter(c -> c.getBrand().equalsIgnoreCase(brand))
-                .filter(c -> c.getPower() >= minPower)
-                .filter(c -> c.getMileage() >= minMileage)
-                .toList();
+    @PostMapping("/search")
+    public List<Car> searchCars(@RequestBody CarFilterRequest request) {
+        return recommendationService.searchCars(request);
     }
 }
