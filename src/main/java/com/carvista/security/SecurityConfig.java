@@ -2,9 +2,12 @@ package com.carvista.security;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -15,6 +18,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -23,39 +27,61 @@ public class SecurityConfig {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
+    @Value("${app.cors.allowed-origins}")
+    private List<String> allowedOrigins;
+
     @Bean
-public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-    http
-        .csrf(csrf -> csrf.disable())
-        .cors(Customizer.withDefaults())
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/auth/signup", "/auth/login").permitAll()
-            .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-            .anyRequest().authenticated()
-        )
-        .httpBasic(httpBasic -> httpBasic.disable())
-        .formLogin(formLogin -> formLogin.disable())
-        .logout(logout -> logout.disable())
-        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        http
+                .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
+                .authorizeHttpRequests(auth -> auth
 
-    return http.build();
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+                        .requestMatchers("/auth/**").permitAll()
+
+                        // Admin only
+                        .requestMatchers(HttpMethod.POST, "/cars/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/cars/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/cars/**").hasRole("ADMIN")
+
+                        // User + Admin
+                        .requestMatchers("/recommend/**").hasAnyRole("ADMIN", "USER")
+
+                        .anyRequest().authenticated())
+
+                .httpBasic(httpBasic -> httpBasic.disable())
+                .formLogin(formLogin -> formLogin.disable())
+                .logout(logout -> logout.disable())
+
+                .addFilterBefore(jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
     }
 
     @Bean
-public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource() {
 
-    CorsConfiguration configuration = new CorsConfiguration();
+        CorsConfiguration configuration = new CorsConfiguration();
 
-    configuration.setAllowedOrigins(List.of("http://localhost:4200"));
-    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-    configuration.setAllowedHeaders(List.of("*"));
-    configuration.setAllowCredentials(true);
+        configuration.setAllowedOrigins(allowedOrigins);
+        configuration.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "OPTIONS"));
 
-    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    source.registerCorsConfiguration("/**", configuration);
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
 
-    return source;
-}
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
+    }
 }

@@ -1,5 +1,6 @@
 package com.carvista.controller;
 
+import com.carvista.model.Role;
 import com.carvista.model.User;
 import com.carvista.repository.UserRepository;
 import com.carvista.security.JwtUtil;
@@ -11,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
-@CrossOrigin(origins = "http://localhost:4200")
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -27,10 +27,9 @@ public class AuthController {
     @PostMapping("/signup")
     public ResponseEntity<User> signup(@RequestBody User user) {
 
-        // TODO: Encrypt password before saving
+        user.setRole(Role.ROLE_USER);
 
-        User savedUser = userRepository.save(user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
+        return ResponseEntity.ok(userRepository.save(user));
     }
 
     @PostMapping("/login")
@@ -48,11 +47,12 @@ public class AuthController {
                     .body(Map.of("message", "Invalid password"));
         }
 
-        String token = jwtUtil.generateToken(existing.getEmail());
+        String token = jwtUtil.generateToken(existing);
 
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
         response.put("email", existing.getEmail());
+        response.put("role", existing.getRole().name());
 
         return ResponseEntity.ok(response);
     }
