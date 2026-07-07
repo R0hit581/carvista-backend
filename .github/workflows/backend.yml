@@ -1,0 +1,13 @@
+name: Deploy Backend to Render
+
+on:
+  push:
+    branches:
+      - main # or branch_rohit if you prefer
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy
+        run: curl -X POST ${{ secrets.https://api.render.com/deploy/srv-d95use67r5hc73cu6jb0?key=wr3ZISRACjU }}
