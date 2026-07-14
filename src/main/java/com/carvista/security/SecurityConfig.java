@@ -15,6 +15,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.carvista.repository.UserRepository;
+import com.carvista.model.User;
 
 @Configuration
 @EnableWebSecurity
@@ -83,5 +90,25 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
 
         return source;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public UserDetailsService userDetailsService(UserRepository userRepository) {
+        return username -> {
+            User u = userRepository.findByEmail(username);
+            if (u == null) {
+                throw new UsernameNotFoundException("User not found: " + username);
+            }
+            return org.springframework.security.core.userdetails.User
+                    .withUsername(u.getEmail())
+                    .password(u.getPassword())
+                    .roles(u.getRole().name().replace("ROLE_", ""))
+                    .build();
+        };
     }
 }
